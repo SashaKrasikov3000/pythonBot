@@ -1,4 +1,4 @@
-# Camsparts бот
+# Camsparts бот [@KrasikovSasha_bot](https://t.me/KrasikovSasha_bot)
 Телеграм бот для поиска запчастей в базе данных Camsparts по артикулу или коду.
 Подключается к MySQL и получает информацию.
 
