@@ -4,6 +4,7 @@ import config
 import time
 import requests
 
+time.sleep(5)
 bot = telebot.TeleBot(config.token)
 searching = True
 @bot.message_handler(commands=["start"])
