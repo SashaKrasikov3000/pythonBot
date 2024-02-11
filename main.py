@@ -27,6 +27,13 @@ def stop_searching(msg):
     bot.send_message(msg.chat.id, "Остановка")
 
 
+@bot.message_handler(commands=["log"])     # Получить логи
+def admin(msg):
+    if msg.from_user.username == "SashaKrasikov":
+        with open("log.txt", 'r') as log:
+            bot.send_message(msg.chat.id, log.read())
+
+
 @bot.message_handler(content_types=["text"])    # Получение артикула, передача в функцию поиска и обработка
 def handle_text(msg):
     if searching:
