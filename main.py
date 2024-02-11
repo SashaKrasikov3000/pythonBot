@@ -39,9 +39,9 @@ def handle_text(msg):
                 for part, select_index in zip(result, select):     # Вывод результата
                     print(part, select_index)
                     try:    # Проверка есть ли картинка у товара
-                        bot.send_photo(msg.chat.id, f"https://spb.camsparts.ru/files/shop_preview/{part[9]}.jpg", caption=f"{part[0]}\nАртикул: {'*'+part[10]+'*' if select_index == -2 else part[10]}\nКод: {'*'+part[9]+'*' if select_index == -3 else part[9]}\nКросс номера: {part[11][:part[11].find(msg.text)] + '*' + msg.text + '*' + part[11][part[11].find(msg.text)+len(msg.text):] if select_index > 0 else part[11]}\nЦена: {part[1]} рублей\nКоличество:\nСПБ Парнас: {part[2]}, Ставрополь: {part[3]}, Сургут: {part[4]}, Краснодар: {part[5]}, Тюмень: {part[6]}, Великий Новгород: {part[8]}", parse_mode="Markdown")
+                        bot.send_photo(msg.chat.id, f"https://spb.camsparts.ru/files/shop_preview/{part[9]}.jpg", caption=f"{part[0]}\nАртикул: {'*'+part[10]+'*' if select_index == -2 else part[10]}\nКод: {'*'+part[9]+'*' if select_index == -3 else part[9]}\nКросс номера: {part[11][:select_index] + '*' + msg.text.upper() + '*' + part[11][select_index+len(msg.text):] if select_index >= 0 else part[11]}\nЦена: {part[1]} рублей\nКоличество:\nСПБ Парнас: {part[2]}, Ставрополь: {part[3]}, Сургут: {part[4]}, Краснодар: {part[5]}, Тюмень: {part[6]}, Великий Новгород: {part[8]}", parse_mode="Markdown")
                     except telebot.apihelper.ApiTelegramException as ex:    # Если нет, вывести только текст
-                        bot.send_message(msg.chat.id, f"{part[0]}\nАртикул: {'*'+part[10]+'*' if select_index == -2 else part[10]}\nКод: {'*'+part[9]+'*' if select_index == -3 else part[9]}\nКросс номера: {part[11][:part[11].find(msg.text)] + '*' + msg.text + '*' + part[11][part[11].find(msg.text)+len(msg.text):] if select_index > 0 else part[11]}\nЦена: {part[1]} рублей\nКоличество:\nСПБ Парнас: {part[2]}, Москва: {part[3]}, Ставрополь: {part[4]}, Великий Новгород: {part[5]}, Краснодар: {part[6]}, Тюмень: {part[7]}, Сургут: {part[8]}", parse_mode="Markdown")
+                        bot.send_message(msg.chat.id, f"{part[0]}\nАртикул: {'*'+part[10]+'*' if select_index == -2 else part[10]}\nКод: {'*'+part[9]+'*' if select_index == -3 else part[9]}\nКросс номера: {part[11][:select_index] + '*' + msg.text.upper() + '*' + part[11][select_index+len(msg.text):] if select_index >= 0 else part[11]}\nЦена: {part[1]} рублей\nКоличество:\nСПБ Парнас: {part[2]}, Ставрополь: {part[3]}, Сургут: {part[4]}, Краснодар: {part[5]}, Тюмень: {part[6]}, Великий Новгород: {part[8]}", parse_mode="Markdown")
             else:
                 bot.send_message(msg.chat.id, "Ничего не найдено "+("по коду" if len(msg.text) <= 5 else "по артикулу"))
     else:
@@ -74,7 +74,7 @@ def search(msg):    # Функция для подключения к базе �
                 if out[i][10] == msg.text:  # Если найдено по артикулу, выделить его
                     select.append(-2)
                 else:  # Если найдено по кросс номеру, выделить его
-                    select.append(out[i][11].find(msg.text))
+                    select.append(out[i][11].find(msg.text.upper()))
 
         conn.close()
         for row in out:
