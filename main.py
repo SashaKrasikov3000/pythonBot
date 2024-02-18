@@ -4,6 +4,7 @@ import config
 import time
 from datetime import datetime, timezone, timedelta
 import requests
+import sqlite3
 
 time.sleep(5)
 bot = telebot.TeleBot(config.token)
@@ -29,21 +30,7 @@ def callback(call):
 
 @bot.message_handler(commands=["start"])
 def greet(msg):
-    bot.send_message(msg.chat.id, "Привет, я помогу найти информацию о запчастях по их артикулу. Напиши /find для поиска")
-
-
-@bot.message_handler(commands=["find"])     # Запустить поиск
-def enable_searching(msg):
-    global searching
-    searching = True
-    bot.send_message(msg.chat.id, "Теперь пиши мне артикулы, а я буду искать по ним информацию. Чтобы прекратить напиши /stop")
-
-
-@bot.message_handler(commands=["stop"])     # Остановка поиска
-def stop_searching(msg):
-    global searching
-    searching = False
-    bot.send_message(msg.chat.id, "Остановка")
+    bot.send_message(msg.chat.id, "Напишите артикул или код товара. Например: 3948095 или 1221")
 
 
 @bot.message_handler(commands=["settings"])
@@ -90,9 +77,9 @@ def handle_text(msg):
 
 def display_info(part, select_index, chat_id, msg_text):    # Вывод информации
     try:  # Проверка есть ли картинка у товара
-        bot.send_photo(chat_id, f"https://spb.camsparts.ru/files/shop_preview/{part[9]}.jpg", caption=f"{part[0]}\nАртикул: {'*' + part[10] + '*' if select_index == -2 else part[10]}\nКод: {'*' + part[9] + '*' if select_index == -3 else part[9]}\nКросс номера: {part[11][:select_index] + '*' + msg_text.upper() + '*' + part[11][select_index + len(msg_text):] if select_index >= 0 else part[11]}\nЦена: {part[1]} рублей\nКоличество:\nСПБ Парнас: {part[2]}, Ставрополь: {part[3]}, Сургут: {part[4]}, Краснодар: {part[5]}, Тюмень: {part[6]}, Великий Новгород: {part[8]}", parse_mode="Markdown")
+        bot.send_photo(chat_id, f"https://spb.camsparts.ru/files/shop_preview/{part[9]}.jpg", caption=f"{part[0]}\nАртикул: {'*' + part[10] + '*' if select_index == -2 else part[10]}\nКод: {'*' + part[9] + '*' if select_index == -3 else part[9]}\nКросс номера: {part[11][:select_index] + '*' + msg_text.upper() + '*' + part[11][select_index + len(msg_text):] if select_index >= 0 else part[11]}\nЦена розничная: {part[1]}₽\nЦена оптовая: {part[12]}₽\nКоличество:\nСПБ Парнас: {part[2]}, Ставрополь: {part[3]}, Сургут: {part[4]}, Краснодар: {part[5]}, Тюмень: {part[6]}, Великий Новгород: {part[8]}", parse_mode="Markdown")
     except telebot.apihelper.ApiTelegramException as ex:  # Если нет, вывести только текст
-        bot.send_message(chat_id, f"{part[0]}\nАртикул: {'*' + part[10] + '*' if select_index == -2 else part[10]}\nКод: {'*' + part[9] + '*' if select_index == -3 else part[9]}\nКросс номера: {part[11][:select_index] + '*' + msg_text.upper() + '*' + part[11][select_index + len(msg_text):] if select_index >= 0 else part[11]}\nЦена: {part[1]} рублей\nКоличество:\nСПБ Парнас: {part[2]}, Ставрополь: {part[3]}, Сургут: {part[4]}, Краснодар: {part[5]}, Тюмень: {part[6]}, Великий Новгород: {part[8]}", parse_mode="Markdown")
+        bot.send_message(chat_id, f"{part[0]}\nАртикул: {'*' + part[10] + '*' if select_index == -2 else part[10]}\nКод: {'*' + part[9] + '*' if select_index == -3 else part[9]}\nКросс номера: {part[11][:select_index] + '*' + msg_text.upper() + '*' + part[11][select_index + len(msg_text):] if select_index >= 0 else part[11]}\nЦена розничная: {part[1]}₽\nЦена оптовая: {part[12]}₽\nКоличество:\nСПБ Парнас: {part[2]}, Ставрополь: {part[3]}, Сургут: {part[4]}, Краснодар: {part[5]}, Тюмень: {part[6]}, Великий Новгород: {part[8]}", parse_mode="Markdown")
 
 
 def search(msg):    # Функция для подключения к базе данных и получения информации
@@ -109,25 +96,30 @@ def search(msg):    # Функция для подключения к базе �
             log.write(f"{str(datetime.now(timezone.utc)+timedelta(hours=3))[:-13]}    User @{msg.from_user.username} searched {msg.text}\n")
         cursor = conn.cursor()
         select = []     # Массив в котором хранится то, что нужно выделить жирным шрифтом для каждой детали. -3 - выделить код, -2 - выделить артикул, число - индекс буквы, с которой начинается выделяемое слово в кросс номерах. Костыль, но нормального способа я не придумал
-        if len(msg.text) <= 5:
-            cursor.execute(f"SELECT name, price, amount_warehouse1, amount_warehouse2, amount_warehouse3, amount_warehouse4, amount_warehouse5, amount_warehouse6, amount_warehouse7, code, article, text from shop_products WHERE code = {msg.text}")
+        if len(msg.text) <= 5 and msg.text.isnumeric():
+            cursor.execute(f"SELECT name, price, amount_warehouse1, amount_warehouse2, amount_warehouse3, amount_warehouse4, amount_warehouse5, amount_warehouse6, amount_warehouse7, code, article, text, price2 from shop_products WHERE code = {msg.text}")
             out = cursor.fetchall()
+            conn.close()
             for i in range(len(out)):
                 select.append(-3)
-        else:    # Если по коду не найдено, искать по артикулам
-            cursor.execute(f"SELECT name, price, amount_warehouse1, amount_warehouse2, amount_warehouse3, amount_warehouse4, amount_warehouse5, amount_warehouse6, amount_warehouse7, code, article, text from shop_products WHERE article = '{msg.text}' OR text LIKE '%{msg.text}%'")
+        elif any([i in "aaa$aaa" for i in ["'", '"', "%", ",", "#", "--", ";"]]):    # Фильтр для избежания SQL инъекции
+            cursor.execute(f"SELECT name, price, amount_warehouse1, amount_warehouse2, amount_warehouse3, amount_warehouse4, amount_warehouse5, amount_warehouse6, amount_warehouse7, code, article, text, price2 from shop_products WHERE article = '{msg.text}' OR text LIKE '%{msg.text}%'")
             out = cursor.fetchall()
+            conn.close()
             for i in range(len(out)):
                 if out[i][10] == msg.text:  # Если найдено по артикулу, выделить его
                     select.append(-2)
                 else:  # Если найдено по кросс номеру, выделить его
                     select.append(out[i][11].find(msg.text.upper()))
+        else:   # Если запрос не подходит под артикул или код, выдать ошибку
+            return -1
 
-        conn.close()
         return out, select
 
     except Exception as ex:     # Если ошибка
         print("Error: ", ex)
+        with open("log.txt", "a") as log:
+            log.write(f"{str(datetime.now(timezone.utc)+timedelta(hours=3))[:-13]}    User @{msg.from_user.username} searched {msg.text}    {ex}\n")
         return -1
 
 
