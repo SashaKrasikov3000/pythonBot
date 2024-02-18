@@ -43,7 +43,9 @@ def settings(msg):
 def admin(msg):
     if msg.from_user.username == "SashaKrasikov":
         with open("log.txt", 'r') as log:
-            bot.send_message(msg.chat.id, log.read())
+            info = log.read()
+            for i in range(0, len(info), 4095):
+                bot.send_message(msg.chat.id, info[i:i + 4095])
 
 
 @bot.message_handler(content_types=["text"])    # Получение артикула, передача в функцию поиска и обработка
@@ -102,7 +104,7 @@ def search(msg):    # Функция для подключения к базе �
             conn.close()
             for i in range(len(out)):
                 select.append(-3)
-        elif any([i in "aaa$aaa" for i in ["'", '"', "%", ",", "#", "--", ";"]]):    # Фильтр для избежания SQL инъекции
+        elif not any([i in msg.text for i in ["'", '"', "%", ",", "#", "--", ";"]]):    # Фильтр для избежания SQL инъекции
             cursor.execute(f"SELECT name, price, amount_warehouse1, amount_warehouse2, amount_warehouse3, amount_warehouse4, amount_warehouse5, amount_warehouse6, amount_warehouse7, code, article, text, price2 from shop_products WHERE article = '{msg.text}' OR text LIKE '%{msg.text}%'")
             out = cursor.fetchall()
             conn.close()
@@ -112,7 +114,7 @@ def search(msg):    # Функция для подключения к базе �
                 else:  # Если найдено по кросс номеру, выделить его
                     select.append(out[i][11].find(msg.text.upper()))
         else:   # Если запрос не подходит под артикул или код, выдать ошибку
-            return -1
+            return -1, 0
 
         return out, select
 
@@ -120,7 +122,7 @@ def search(msg):    # Функция для подключения к базе �
         print("Error: ", ex)
         with open("log.txt", "a") as log:
             log.write(f"{str(datetime.now(timezone.utc)+timedelta(hours=3))[:-13]}    User @{msg.from_user.username} searched {msg.text}    {ex}\n")
-        return -1
+        return -1, 0
 
 
 bot.infinity_polling()
