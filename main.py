@@ -151,8 +151,8 @@ def search(msg):    # Функция для подключения к базе �
 
 # print(sqlite_query("DROP TABLE users"))
 # print(sqlite_query("CREATE TABLE users (id INTEGER, username TEXT, is_admin BOOLEAN, settings TEXT, PRIMARY KEY (id))"))
-# print(sqlite_query("INSERT INTO users (username, is_admin) VALUES ('user', 1)"))
-# print(sqlite_query("UPDATE users SET is_admin = 1 WHERE username = 'user'"))
+# print(sqlite_query("INSERT INTO users (username, is_admin, settings) VALUES ('SashaKrasikov', 1, '00000')"))
+# print(sqlite_query("UPDATE users SET is_admin = 1 WHERE username = 'SashaKrasikov'"))
 print(sqlite_query("SELECT * FROM users"))
 
 bot.infinity_polling()

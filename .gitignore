@@ -2,4 +2,4 @@ venv/
 config.py
 *.idea
 *.pyc
-log.txt
+Camsparts.db
