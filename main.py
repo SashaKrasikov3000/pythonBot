@@ -47,19 +47,18 @@ def settings(msg):
 
 @bot.message_handler(commands=["log"])     # Получить логи
 def admin(msg):
-    if sqlite_query(f"SELECT * FROM users WHERE username = '{msg.from_user.username}' and is_admin = 1"):
-        result = sqlite_query(f"SELECT {'* FROM log' if len(msg.text) == 4 else msg.text[4:]}")
+    if sqlite_query(f"SELECT * FROM users WHERE username = '{msg.from_user.username}' and is_admin = 1"):  # Доступ к логам только у админов
+        result = sqlite_query(f"SELECT {'* FROM log' if len(msg.text) == 4 else msg.text[4:]}")  # После /log можно указать свой запрос
         output = ""
         for i in result:
-            if len(msg.text) == 4:
+            if len(msg.text) == 4:  # Если введен просто /log
                 output += f"{i[0]}. User @{i[1]} searched {i[2]}{f' with error: {i[3]}' if i[3] is not None else ' '} at {i[4]}\n"
             else:
                 for j in i:
                     output += f"{j}  "
                 output += "\n"
-        for i in range(0, len(msg.text), 4095):
+        for i in range(0, len(output), 4095):
             bot.send_message(msg.chat.id, output[i:i + 4095])
-
 
 
 @bot.message_handler(content_types=["text"])    # Получение артикула, передача в функцию поиска и обработка
