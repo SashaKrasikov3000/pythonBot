@@ -92,7 +92,6 @@ def handle_text(msg):
                 keyboard = types.InlineKeyboardMarkup()
                 parts_list = []
                 for part, select_index, i in zip(result, select, [i for i in range(len(result))]):    # Вывод результата с кнопками
-                    print(f"{part} , {select_index} , {msg.chat.id} , {msg.text}")
                     parts_list.append([part, select_index, msg])
                     keyboard.add(types.InlineKeyboardButton(text=part[0], callback_data=f"{i}"))
                 if len(parts_list) > 1:
@@ -118,7 +117,7 @@ def sqlite_query(query):
         con.close()
         return result
     else:
-        logging.info("Wrong symbol in sqlite query")
+        logging.info("Wrong symbol in sqlite query: "+query)
         return []
 
 
@@ -141,6 +140,7 @@ def search(msg):    # Функция для подключения к базе �
 
         print("Connected       "+msg.text+"      "+time.ctime())
         sqlite_query(f"INSERT INTO log (username, request, time) VALUES ('{msg.from_user.username}', '{msg.text}', '{str(datetime.now(timezone.utc)+timedelta(hours=3))[:-13]}')")
+        logging.info(f"User @{msg.from_user.username} searched {msg.text} at {str(datetime.now(timezone.utc)+timedelta(hours=3))[:-13]}\n")
 
         cursor = conn.cursor()
         select = []     # Массив в котором хранится то, что нужно выделить жирным шрифтом для каждой детали. -3 - выделить код, -2 - выделить артикул, число - индекс буквы, с которой начинается выделяемое слово в кросс номерах. Костыль, но нормального способа я не придумал
