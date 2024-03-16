@@ -5,10 +5,19 @@ import time
 from datetime import datetime, timezone, timedelta
 import requests
 import sqlite3
+import logging
 
 time.sleep(5)
 bot = telebot.TeleBot(config.token)
 parts_list = []    # список для хранения данных о запчастях для вывода в callback_part_details (оно не влезает в callback_data)
+
+logging.basicConfig(
+    level=logging.INFO,
+    filename="error_log.txt",
+    filemode="a",
+    format="%(levelname)s: %(message)s     %(asctime)s"
+)
+logging.info("\n\n-----STARTING BOT-----")
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback(call):
@@ -48,15 +57,23 @@ def settings(msg):
 @bot.message_handler(commands=["log"])     # Получить логи
 def admin(msg):
     if sqlite_query(f"SELECT * FROM users WHERE username = '{msg.from_user.username}' and is_admin = 1"):  # Доступ к логам только у админов
-        result = sqlite_query(f"SELECT {'* FROM log' if len(msg.text) == 4 else msg.text[4:]}")  # После /log можно указать свой запрос
         output = ""
-        for i in result:
-            if len(msg.text) == 4:  # Если введен просто /log
-                output += f"{i[0]}. User @{i[1]} searched {i[2]}{f' with error: {i[3]}' if i[3] is not None else ' '} at {i[4]}\n"
-            else:
-                for j in i:
-                    output += f"{j}  "
-                output += "\n"
+        if msg.text[5:] != "errors":    # Команда /log errors выводит логи из файла error_log.txt
+            try:
+                result = sqlite_query(f"SELECT {'* FROM log' if len(msg.text) == 4 else msg.text[4:]}")  # После /log можно указать свой запрос
+            except sqlite3.OperationalError as ex:
+                result = [["Ошибка во время выполнения SQL запроса. Проверьте синтаксис"]]
+                logging.error(ex)
+            for i in result:
+                if len(msg.text) == 4:  # Если введен просто /log
+                    output += f"{i[0]}. User @{i[1]} searched {i[2]}{f' with error: {i[3]}' if i[3] is not None else ' '} at {i[4]}\n"
+                else:
+                    for j in i:
+                        output += f"{j}  "
+                    output += "\n"
+        else:
+            with open("error_log.txt", "r") as f:
+                output = f.read()
         for i in range(0, len(output), 4095):
             bot.send_message(msg.chat.id, output[i:i + 4095])
 
@@ -71,7 +88,7 @@ def handle_text(msg):
         bot.send_message(msg.chat.id, "Ошибка при выполнении запроса")
     else:
         if len(result) > 0:
-            if sqlite_query(f"SELECT * FROM users WHERE username = '{msg.from_user.username}' and settings LIKE '1____'"):
+            if sqlite_query(f"SELECT * FROM users WHERE username = '{msg.from_user.username}' and settings LIKE '1____'"):  # Если включен режим кнопок (первая цифра в настройках)
                 keyboard = types.InlineKeyboardMarkup()
                 parts_list = []
                 for part, select_index, i in zip(result, select, [i for i in range(len(result))]):    # Вывод результата с кнопками
@@ -91,14 +108,18 @@ def handle_text(msg):
 
 def sqlite_query(query):
     print(query)
-    con = sqlite3.connect("Camsparts.db")
-    cursor = con.cursor()
-    result = cursor.execute(query)
-    if query.startswith(("INSERT", "UPDATE")):
-        con.commit()
-    result = result.fetchall()
-    con.close()
-    return result
+    if not any([i in query for i in ["'", '"', "%", ",", "#", "--", ";"]]):
+        con = sqlite3.connect("Camsparts.db")
+        cursor = con.cursor()
+        result = cursor.execute(query)
+        if query.startswith(("INSERT", "UPDATE")):
+            con.commit()
+        result = result.fetchall()
+        con.close()
+        return result
+    else:
+        logging.info("Wrong symbol in sqlite query")
+        return []
 
 
 def display_info(part, select_index, chat_id, msg_text):    # Вывод информации
@@ -145,6 +166,7 @@ def search(msg):    # Функция для подключения к базе �
 
     except Exception as ex:     # Если ошибка
         print("Error: ", ex)
+        logging.error("Exception in search(): ", exc_info=True)
         sqlite_query(f"INSERT INTO log (username, request, exception, time) VALUES ({msg.from_user.username}, {msg.text}, {ex}, {str(datetime.now(timezone.utc) + timedelta(hours=3))[:-13]})")
         return -1, 0
 

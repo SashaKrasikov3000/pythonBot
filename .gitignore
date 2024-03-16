@@ -3,3 +3,4 @@ config.py
 *.idea
 *.pyc
 Camsparts.db
+error_log.txt
