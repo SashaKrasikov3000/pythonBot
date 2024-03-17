@@ -58,9 +58,12 @@ def settings(msg):
 def admin(msg):
     if sqlite_query(f"SELECT * FROM users WHERE username = '{msg.from_user.username}' and is_admin = 1"):  # Доступ к логам только у админов
         output = ""
-        if msg.text[5:] != "errors":    # Команда /log errors выводит логи из файла error_log.txt
+        if msg.text[5:] == "errors":    # Команда /log errors выводит логи из файла error_log.txt
+            with open("error_log.txt", "r") as f:
+                output = f.read()
+        else:
             try:
-                result = sqlite_query(f"SELECT {'* FROM log' if len(msg.text) == 4 else msg.text[4:]}")  # После /log можно указать свой запрос
+                result = sqlite_query('SELECT * FROM log' if len(msg.text) == 4 else msg.text[4:])  # После /log можно указать свой запрос
             except sqlite3.OperationalError as ex:
                 result = [["Ошибка во время выполнения SQL запроса. Проверьте синтаксис"]]
                 logging.error(ex)
@@ -71,9 +74,6 @@ def admin(msg):
                     for j in i:
                         output += f"{j}  "
                     output += "\n"
-        else:
-            with open("error_log.txt", "r") as f:
-                output = f.read()
         for i in range(0, len(output), 4095):
             bot.send_message(msg.chat.id, output[i:i + 4095])
 
@@ -107,18 +107,15 @@ def handle_text(msg):
 
 def sqlite_query(query):
     print(query)
-    if not any([i in query for i in ["'", '"', "%", ",", "#", "--", ";"]]):
-        con = sqlite3.connect("Camsparts.db")
-        cursor = con.cursor()
-        result = cursor.execute(query)
-        if query.startswith(("INSERT", "UPDATE")):
-            con.commit()
-        result = result.fetchall()
-        con.close()
-        return result
-    else:
-        logging.info("Wrong symbol in sqlite query: "+query)
-        return []
+    logging.info(f"SQL query: {query}")
+    con = sqlite3.connect("Camsparts.db")
+    cursor = con.cursor()
+    result = cursor.execute(query)
+    if any([i in query for i in ["INSERT", "UPDATE", "DELETE"]]):
+        con.commit()
+    result = result.fetchall()
+    con.close()
+    return result
 
 
 def display_info(part, select_index, chat_id, msg_text):    # Вывод информации
