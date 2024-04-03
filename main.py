@@ -140,12 +140,7 @@ def admin(msg):
                 logging.error(ex)
             for i in result:
                 if len(msg.text) == 4:  # Если введен просто /log
-                    output += f"{i[0]}. " \
-                              f"User @{i[1]} " \
-                              f"searched {i[2]}" \
-                              f" with error: {i[3]}"\
-                              if i[3] is not None else " " \
-                              f"at {i[4]}\n"
+                    output += f"{i[0]}. User @{i[1]} searched {i[2]} {'with error: i[3]' if i[3] is not None else ' '} at {i[4]}\n"
                 else:
                     for j in i:
                         output += f"{j}  "
@@ -354,9 +349,9 @@ def search(msg):
         return -1, 0
 
 
-# print(sqlite_query("DROP TABLE users"))
-# print(sqlite_query("CREATE TABLE users (id INTEGER, username TEXT, "
-#       + "is_admin BOOLEAN, settings TEXT, PRIMARY KEY (id))"))
+# print(sqlite_query("DROP TABLE log"))
+# print(sqlite_query("CREATE TABLE log (id INTEGER, username TEXT, "
+#       + "request TEXT, exception TEXT, time TEXT, PRIMARY KEY (id))"))
 # print(sqlite_query("INSERT INTO users (username, is_admin, settings) "
 #       + "VALUES ('SashaKrasikov', 1, '00000')"))
 # print(sqlite_query("UPDATE users SET is_admin = 1 "
